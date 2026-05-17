@@ -28,40 +28,157 @@
   }
 }
 
-/* Markdown report styles */
-.report-content h1 {
-  @apply mb-4 mt-8 text-2xl font-bold text-gray-900 first:mt-0;
+/* ─── Report content styles ──────────────────────────────────────────────── */
+
+.report-content {
+  @apply text-gray-700;
 }
+
+.report-content h1 {
+  @apply mb-2 mt-10 text-2xl font-bold text-gray-900 first:mt-0;
+}
+
 .report-content h2 {
   @apply mb-3 mt-6 text-xl font-semibold text-gray-800;
 }
+
 .report-content h3 {
-  @apply mb-2 mt-4 text-lg font-semibold text-gray-700;
+  @apply mb-2 mt-4 text-base font-semibold text-gray-700;
 }
+
 .report-content p {
   @apply mb-3 leading-relaxed text-gray-700;
 }
+
 .report-content ul {
-  @apply mb-3 list-disc pl-5 text-gray-700;
+  @apply mb-4 list-disc pl-5 text-gray-700;
 }
+
 .report-content ol {
-  @apply mb-3 list-decimal pl-5 text-gray-700;
+  @apply mb-4 list-decimal pl-5 text-gray-700;
 }
+
 .report-content li {
-  @apply mb-1;
+  @apply mb-1.5 leading-relaxed;
 }
+
+/* Tables — styled via custom react-markdown components, these are fallback */
 .report-content table {
-  @apply mb-4 w-full border-collapse text-sm;
+  @apply mb-6 w-full text-sm;
+  border-collapse: separate;
+  border-spacing: 0;
 }
-.report-content th {
-  @apply border border-gray-200 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700;
+
+.report-content tbody tr:nth-child(even) {
+  background-color: #f8faff;
 }
-.report-content td {
-  @apply border border-gray-200 px-3 py-2 text-gray-700;
+
+.report-content tbody tr:hover {
+  background-color: #eef2ff;
 }
-.report-content blockquote {
-  @apply my-3 border-l-4 border-brand-500 pl-4 italic text-gray-600;
-}
+
 .report-content code {
-  @apply rounded bg-gray-100 px-1 py-0.5 font-mono text-sm text-gray-800;
+  @apply rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm text-gray-800;
+}
+
+.report-content pre {
+  @apply mb-4 overflow-x-auto rounded-xl bg-gray-900 p-4;
+}
+
+.report-content pre code {
+  @apply bg-transparent px-0 py-0 text-gray-100;
+}
+
+.report-content hr {
+  @apply my-6 border-gray-200;
+}
+
+/* ─── Print styles ───────────────────────────────────────────────────────── */
+
+@media print {
+  @page {
+    margin: 18mm 20mm;
+    size: A4 portrait;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #111;
+  }
+
+  /* Strip card chrome */
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Full width */
+  .max-w-4xl {
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Section headers */
+  .report-content h1 {
+    font-size: 16pt;
+    margin-top: 24pt;
+    page-break-after: avoid;
+  }
+
+  .report-content h2 {
+    font-size: 13pt;
+    page-break-after: avoid;
+  }
+
+  .report-content h3 {
+    font-size: 11pt;
+    page-break-after: avoid;
+  }
+
+  /* Force browser to print background colors (blue header row etc.) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove overflow clipping so wide tables aren't cut off */
+  .report-table-wrap,
+  .report-table-wrap > div {
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 4px !important;
+    border: 1px solid #d1d5db !important;
+    ring: none !important;
+  }
+
+  /* Scale down table text so columns fit on A4 width */
+  .report-content th,
+  .report-content td {
+    font-size: 8pt !important;
+    padding: 4pt 6pt !important;
+    white-space: normal !important;
+  }
+
+  /* Keep tables together where possible */
+  .report-content table {
+    page-break-inside: auto;
+  }
+
+  .report-content tr {
+    page-break-inside: avoid;
+  }
+
+  /* Keep callout cards together */
+  .insight-card,
+  .recommendation-card {
+    page-break-inside: avoid;
+  }
 }

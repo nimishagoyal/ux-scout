@@ -19,6 +19,7 @@ export interface MobbinScreenshot {
   imageUrl: string;
   flowType: string;
   platform: "ios" | "android" | "web";
+  stepLabel?: string;
 }
 
 export interface AnalyzeResponse {

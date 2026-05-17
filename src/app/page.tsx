@@ -1,18 +1,11 @@
 "use client";
 
-/**
- * Main page — Yijia owns this file.
- * Orchestrates the full UX Scout flow:
- *   1. Search form → triggers analysis
- *   2. Report display + export
- *   3. Prototype interview → prompt output
- */
-
 import { useState } from "react";
 import { Telescope } from "lucide-react";
 import SearchForm from "@/components/SearchForm";
 import ReportDisplay from "@/components/ReportDisplay";
 import ExportButtons from "@/components/ExportButtons";
+import ScreenshotJourney from "@/components/ScreenshotJourney";
 import PrototypeInterview from "@/components/PrototypeInterview";
 import PrototypePromptOutput from "@/components/PrototypePromptOutput";
 import type { AnalyzeRequest, MobbinScreenshot } from "@/types";
@@ -61,8 +54,8 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      {/* Header */}
-      <header className="mb-10 text-center">
+      {/* Header — hidden when printing */}
+      <header className="no-print mb-10 text-center">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
           <Telescope className="h-4 w-4" />
           AI-Powered Competitive UX Intelligence
@@ -76,24 +69,24 @@ export default function HomePage() {
         </p>
       </header>
 
-      {/* Search */}
-      <div className="card mb-8">
+      {/* Search — hidden when printing */}
+      <div className="no-print card mb-8">
         <SearchForm
           onSubmit={handleAnalyze}
           isLoading={appState === "loading"}
         />
       </div>
 
-      {/* Error */}
+      {/* Error — hidden when printing */}
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="no-print mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {/* Loading state */}
       {appState === "loading" && (
-        <div className="card flex flex-col items-center gap-4 py-16 text-center">
+        <div className="no-print card flex flex-col items-center gap-4 py-16 text-center">
           <span className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
           <div>
             <p className="font-semibold text-gray-800">Analyzing competitor UX…</p>
@@ -107,19 +100,27 @@ export default function HomePage() {
       {/* Report */}
       {(appState === "report" || appState === "prototype" || appState === "prompt") && report && (
         <div className="card mb-8">
-          <div className="mb-6 flex items-center justify-between">
+          {/* Export buttons — hidden when printing */}
+          <div className="no-print mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
               UX Intelligence Report
             </h2>
             <ExportButtons reportMarkdown={report} />
           </div>
+
+          {/* Report content — always visible including print */}
           <ReportDisplay report={report} />
+
+          {/* Screenshot journey — shown when Mobbin screenshots are available */}
+          {screenshots.length > 0 && (
+            <ScreenshotJourney screenshots={screenshots} />
+          )}
         </div>
       )}
 
-      {/* Prototype interview CTA */}
+      {/* Prototype interview — hidden when printing */}
       {appState === "report" && (
-        <div className="card mb-8">
+        <div className="no-print card mb-8">
           <div className="mb-5">
             <h2 className="text-xl font-bold text-gray-900">
               Generate a Prototype
@@ -136,9 +137,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Prototype prompt output */}
+      {/* Prototype prompt output — hidden when printing */}
       {appState === "prompt" && prototypePrompt && (
-        <div className="card">
+        <div className="no-print card">
           <div className="mb-5">
             <h2 className="text-xl font-bold text-gray-900">
               Your Prototype Prompt
