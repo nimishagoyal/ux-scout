@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..700&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,177 +8,57 @@
   html {
     @apply antialiased;
   }
-  body {
-    @apply bg-gray-50 text-gray-900;
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: #14171C;
+    color: #E8E3D2;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-variation-settings: 'opsz' 14, 'wdth' 100;
+  }
+  ::selection { background: rgba(217,150,62,0.4); color: #FBF3E2; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay; opacity: .4;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(232,227,210,0.08); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(232,227,210,0.18); }
+  * {
+    box-sizing: border-box;
   }
 }
 
-@layer components {
-  .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  .input {
-    @apply block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
-  }
-  .card {
-    @apply rounded-2xl border border-gray-200 bg-white p-6 shadow-sm;
-  }
-}
+/* ─── Ambient motion keyframes ────────────────────────────── */
+@keyframes pulse  { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.10); } }
+@keyframes breath { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+@keyframes fadeUp { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes fieldBreath { 0%, 100% { opacity: .9; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes lumen-pulse  { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes lumen-drift  { 0% { transform: translate(0,0); } 50% { transform: translate(4px, -3px); } 100% { transform: translate(0,0); } }
+@keyframes lumen-breath { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+@keyframes lumen-scan   { 0% { transform: translateX(-30%); opacity: 0; } 30% { opacity: .35; } 70% { opacity: .35; } 100% { transform: translateX(130%); opacity: 0; } }
+@keyframes lumen-fade   { 0%, 100% { opacity: .25; } 50% { opacity: .55; } }
+@keyframes lumen-dotdrift { 0% { transform: translate(0,0); } 100% { transform: translate(8px, -6px); } }
 
-/* ─── Report content styles ──────────────────────────────────────────────── */
-
-.report-content {
-  @apply text-gray-700;
-}
-
-.report-content h1 {
-  @apply mb-2 mt-10 text-2xl font-bold text-gray-900 first:mt-0;
-}
-
-.report-content h2 {
-  @apply mb-3 mt-6 text-xl font-semibold text-gray-800;
-}
-
-.report-content h3 {
-  @apply mb-2 mt-4 text-base font-semibold text-gray-700;
-}
-
-.report-content p {
-  @apply mb-3 leading-relaxed text-gray-700;
-}
-
-.report-content ul {
-  @apply mb-4 list-disc pl-5 text-gray-700;
-}
-
-.report-content ol {
-  @apply mb-4 list-decimal pl-5 text-gray-700;
-}
-
-.report-content li {
-  @apply mb-1.5 leading-relaxed;
-}
-
-/* Tables — styled via custom react-markdown components, these are fallback */
-.report-content table {
-  @apply mb-6 w-full text-sm;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.report-content tbody tr:nth-child(even) {
-  background-color: #f8faff;
-}
-
-.report-content tbody tr:hover {
-  background-color: #eef2ff;
-}
-
-.report-content code {
-  @apply rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm text-gray-800;
-}
-
-.report-content pre {
-  @apply mb-4 overflow-x-auto rounded-xl bg-gray-900 p-4;
-}
-
-.report-content pre code {
-  @apply bg-transparent px-0 py-0 text-gray-100;
-}
-
-.report-content hr {
-  @apply my-6 border-gray-200;
-}
-
-/* ─── Print styles ───────────────────────────────────────────────────────── */
-
+/* ─── Print styles ───────────────────────────────────── */
 @media print {
   @page {
     margin: 18mm 20mm;
     size: A4 portrait;
   }
-
   .no-print {
     display: none !important;
   }
-
   body {
     background: white !important;
-    font-size: 11pt;
     color: #111;
-  }
-
-  /* Strip card chrome */
-  .card {
-    box-shadow: none !important;
-    border: none !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Full width */
-  .max-w-4xl {
-    max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-
-  /* Section headers */
-  .report-content h1 {
-    font-size: 16pt;
-    margin-top: 24pt;
-    page-break-after: avoid;
-  }
-
-  .report-content h2 {
-    font-size: 13pt;
-    page-break-after: avoid;
-  }
-
-  .report-content h3 {
     font-size: 11pt;
-    page-break-after: avoid;
-  }
-
-  /* Force browser to print background colors (blue header row etc.) */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Remove overflow clipping so wide tables aren't cut off */
-  .report-table-wrap,
-  .report-table-wrap > div {
-    overflow: visible !important;
-    box-shadow: none !important;
-    border-radius: 4px !important;
-    border: 1px solid #d1d5db !important;
-    ring: none !important;
-  }
-
-  /* Scale down table text so columns fit on A4 width */
-  .report-content th,
-  .report-content td {
-    font-size: 8pt !important;
-    padding: 4pt 6pt !important;
-    white-space: normal !important;
-  }
-
-  /* Keep tables together where possible */
-  .report-content table {
-    page-break-inside: auto;
-  }
-
-  .report-content tr {
-    page-break-inside: avoid;
-  }
-
-  /* Keep callout cards together */
-  .insight-card,
-  .recommendation-card {
-    page-break-inside: avoid;
   }
 }

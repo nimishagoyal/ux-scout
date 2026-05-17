@@ -1,6 +1,5 @@
 /**
  * POST /api/analyze
- * Nimisha + Jose own this endpoint.
  *
  * Strategy (in priority order):
  *   1. CLI path — runs `claude -p` with Mobbin MCP tools for live screenshots
@@ -116,33 +115,10 @@ export async function POST(req: NextRequest) {
     }
 
     let report: string;
-    let screenshots: object[] = [];
-
-    // Extract ![alt](url) images embedded by Claude in the report
-    function extractEmbeddedScreenshots(md: string): object[] {
-      const regex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
-      const found: object[] = [];
-      let match;
-      while ((match = regex.exec(md)) !== null) {
-        const alt = match[1]; // e.g. "Coinbase — Home Screen"
-        const url = match[2];
-        const appName = alt.split(/[—–-]/)[0].trim() || "App";
-        found.push({
-          id: `embedded-${found.length}`,
-          appName,
-          imageUrl: url,
-          flowType,
-          platform: "ios",
-          stepLabel: alt.split(/[—–-]/).slice(1).join("—").trim() || undefined,
-        });
-      }
-      return found;
-    }
 
     try {
       // Path 1: CLI with live Mobbin MCP
       report = await generateReportViaCLI(category, flowType);
-      screenshots = extractEmbeddedScreenshots(report);
     } catch (cliErr) {
       console.warn(
         "[/api/analyze] CLI path failed, falling back to direct API:",
@@ -150,33 +126,19 @@ export async function POST(req: NextRequest) {
       );
       // Path 2 & 3: direct API (uses Mobbin MCP token if set, else fallback screenshots, else knowledge)
       const fallbackImages = loadFallbackScreenshots();
+      if (fallbackImages.length > 0) {
+        console.log(
+          `[/api/analyze] Using ${fallbackImages.length} fallback screenshots from public/`
+        );
+      }
       report = await generateReport(
         category,
         flowType,
         fallbackImages.length > 0 ? fallbackImages : undefined
       );
-
-      // Check if Claude embedded Mobbin image URLs in the report (API MCP path)
-      const embedded = extractEmbeddedScreenshots(report);
-      if (embedded.length > 0) {
-        screenshots = embedded;
-      } else if (fallbackImages.length > 0) {
-        // Fall back to returning the base64 images we sent to Claude
-        console.log(`[/api/analyze] Used ${fallbackImages.length} fallback screenshots`);
-        screenshots = fallbackImages.map((img, i) => ({
-          id: `fallback-${i}`,
-          appName: img.appName,
-          imageUrl: `data:${img.mediaType};base64,${img.base64}`,
-          flowType,
-          platform: "ios",
-          stepLabel: img.filename
-            .replace(/\.png$|\.jpg$/i, "")
-            .replace(/^\S+ \d+$/, `Screen ${i + 1}`),
-        }));
-      }
     }
 
-    return NextResponse.json({ report, screenshots });
+    return NextResponse.json({ report });
   } catch (err) {
     console.error("[/api/analyze]", err);
     return NextResponse.json(
