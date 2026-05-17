@@ -228,15 +228,44 @@ function parseJourneys(md: string, competitorsHint: string[]): ParsedJourney[] {
 }
 
 function extractSteps(body: string): { name: string; hint: string }[] {
-  // Look for numbered or bulleted lists with short labels
-  const stepRe = /^(?:\d+[.)]|\*|-)\s+\*?\*?([^:*\n]{3,60}?)\*?\*?\s*(?:[:—\-]\s*(.+))?$/gm;
   const out: { name: string; hint: string }[] = [];
-  let m;
-  while ((m = stepRe.exec(body)) !== null) {
-    const name = stripMd(m[1].trim()).replace(/\.$/, "");
-    const hint = m[2] ? stripMd(m[2].trim()) : "";
-    if (name && name.length < 80) out.push({ name, hint });
+
+  // Primary format Jose's prompt enforces:
+  //   1. **Title or Screenshot N — Real Name** — description
+  const boldRe = /^\s*\d+[.)]\s+\*\*([^*]+?)\*\*\s*[—–\-:]?\s*(.*)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = boldRe.exec(body)) !== null) {
+    const rawName = stripMd(m[1].trim()).replace(/\.$/, "");
+    // Strip leading "Screenshot N — " when Claude prefixes the title.
+    const cleanName =
+      rawName.replace(/^Screen(?:shot)?\s*\d+\s*[—–\-:]?\s*/i, "").trim() ||
+      rawName;
+    const hint = stripMd(
+      m[2]
+        .trim()
+        .replace(/^\*\*+|\*\*+$/g, "")
+        .replace(/^[—–\-:]\s*/, "")
+    );
+    if (cleanName) out.push({ name: cleanName, hint });
   }
+
+  // Fallback: plain numbered items without bold.
+  if (out.length === 0) {
+    const plainRe = /^\s*\d+[.)]\s+([^\n]+)$/gm;
+    while ((m = plainRe.exec(body)) !== null) {
+      const text = stripMd(m[1].trim());
+      const dashMatch = text.match(/^(.{3,60}?)\s*[—–\-:]\s*(.+)$/);
+      if (dashMatch) {
+        out.push({
+          name: dashMatch[1].trim(),
+          hint: dashMatch[2].trim(),
+        });
+      } else if (text.length < 80) {
+        out.push({ name: text, hint: "" });
+      }
+    }
+  }
+
   return out.slice(0, 6);
 }
 
