@@ -240,72 +240,217 @@ function extractSteps(body: string): { name: string; hint: string }[] {
   return out.slice(0, 6);
 }
 
+function extractStatFromLead(lead: string): {
+  stat: string;
+  suffix: string;
+  remainder: string;
+} {
+  const text = lead.trim();
+
+  // "78%" / "78.5%"
+  let m = text.match(/^([\d.]+%)/);
+  if (m) {
+    return { stat: m[1], suffix: "", remainder: text.slice(m[0].length).trim() };
+  }
+
+  // "3 of 4" / "9 / 12"
+  m = text.match(/^([\d.]+)\s*(?:of|\/)\s*(\d+)/i);
+  if (m) {
+    return {
+      stat: `${m[1]} / ${m[2]}`,
+      suffix: "",
+      remainder: text.slice(m[0].length).trim(),
+    };
+  }
+
+  // "11s" / "30s" — number + single letter unit
+  m = text.match(/^([\d.]+)([a-z])\b/);
+  if (m) {
+    return { stat: m[1], suffix: m[2], remainder: text.slice(m[0].length).trim() };
+  }
+
+  // "5.4 screens" — number + word unit
+  m = text.match(/^([\d.]+)\s+([a-z]+s?)\b/i);
+  if (m) {
+    return {
+      stat: m[1],
+      suffix: m[2].toLowerCase(),
+      remainder: text.slice(m[0].length).trim(),
+    };
+  }
+
+  // "All 4 apps" / "Every app" / "Most apps"
+  m = text.match(/^(All|Most|Every|None|Only|Some|Each|Half)(?:\s+(\d+))?\s+([a-z]+s?)\b/i);
+  if (m) {
+    const num = m[2] ? ` ${m[2]}` : "";
+    return {
+      stat: `${m[1]}${num}`,
+      suffix: m[3].toLowerCase(),
+      remainder: text.slice(m[0].length).trim(),
+    };
+  }
+
+  // Pure number
+  m = text.match(/^([\d.]+)/);
+  if (m) {
+    return { stat: m[1], suffix: "", remainder: text.slice(m[0].length).trim() };
+  }
+
+  // Fallback: first 1-2 words as stat
+  const words = text.split(/\s+/);
+  return {
+    stat: words.slice(0, Math.min(2, words.length)).join(" "),
+    suffix: "",
+    remainder: words.slice(2).join(" "),
+  };
+}
+
 function parseInsights(md: string): ParsedInsight[] {
   const insights: ParsedInsight[] = [];
-  // Pattern: bullets that lead with a stat (e.g. "78% of top apps...", "Most apps...", "4 of 5")
-  const bulletRe = /^(?:[-*]\s+|\d+\.\s+)\*?\*?"?([^"\n]+?)"?\*?\*?\s*$/gm;
-  let m;
-  while ((m = bulletRe.exec(md)) !== null) {
-    const line = stripMd(m[1].trim());
-    if (!line) continue;
-    const statMatch = line.match(/^([\d.]+%?|[\d]+\s*(?:of|\/)\s*\d+|Most|All|None|Only)/i);
-    if (statMatch) {
-      const stat = statMatch[1];
-      let suffix = "";
-      const rest = line.slice(stat.length).trim();
-      // Try to extract a short suffix like "of top apps"
-      const suffixMatch = rest.match(/^(of [a-z ]+|apps|competitors)/i);
-      if (suffixMatch) suffix = suffixMatch[1];
-      const body = rest.replace(/^[:.\-—]\s*/, "");
+
+  // Pattern 1: blockquotes with bold lead (Claude's preferred format).
+  // > **All 4 apps prioritize phone verification** — signaling that phone numbers...
+  // > **78% of top apps defer signup** until the first interaction.
+  const blockquoteRe = /^>\s*\*\*([^*]+)\*\*\s*[—–\-]?\s*([^\n]*)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = blockquoteRe.exec(md)) !== null) {
+    const boldLead = m[1].trim();
+    const after = m[2].trim();
+    const { stat, suffix, remainder } = extractStatFromLead(boldLead);
+    const body = stripMd([remainder, after].filter(Boolean).join(" ").trim());
+    insights.push({ stat, suffix, body });
+  }
+
+  // Pattern 2: bullets with bold lead.
+  // - **78% of top apps...** body
+  if (insights.length === 0) {
+    const bulletBoldRe = /^(?:[-*]|\d+\.)\s+\*\*([^*]+)\*\*\s*[—–\-]?\s*([^\n]*)$/gm;
+    while ((m = bulletBoldRe.exec(md)) !== null) {
+      const boldLead = m[1].trim();
+      const after = m[2].trim();
+      const { stat, suffix, remainder } = extractStatFromLead(boldLead);
+      const body = stripMd([remainder, after].filter(Boolean).join(" ").trim());
       insights.push({ stat, suffix, body });
-    } else if (line.length > 0 && line.length < 200) {
-      // Generic insight: take first 3-4 words as the stat
-      const words = line.split(/\s+/);
-      const headStat = words.slice(0, 3).join(" ");
-      const body = words.slice(3).join(" ");
-      insights.push({ stat: headStat, body });
     }
   }
+
+  // Pattern 3: plain bullets starting with a stat-like prefix.
+  if (insights.length === 0) {
+    const plainBulletRe = /^(?:[-*]|\d+\.)\s+([^\n]+)$/gm;
+    while ((m = plainBulletRe.exec(md)) !== null) {
+      const line = stripMd(m[1].trim());
+      if (!line) continue;
+      const { stat, suffix, remainder } = extractStatFromLead(line);
+      const body = remainder.replace(/^[:.\-—\s]+/, "");
+      if (stat && body) insights.push({ stat, suffix, body });
+    }
+  }
+
   return insights.slice(0, 6);
+}
+
+// Extract a single-line field value from a recommendation body.
+// Tolerates:  **Field:** value   |   - **Field:** value   |   **Field**: value
+//             |   **Field Name with spaces:** value
+function extractField(body: string, nameRe: RegExp): string | undefined {
+  const re = new RegExp(
+    `(?:^|\\n)\\s*(?:[-*]\\s+)?\\*?\\*?(${nameRe.source})\\*?\\*?\\s*:\\s*\\*?\\*?\\s*([^\\n]+?)\\s*(?=\\n|$)`,
+    "i"
+  );
+  const m = body.match(re);
+  if (!m) return undefined;
+  const value = m[2].replace(/\*+$/, "").trim();
+  return value.length > 0 ? stripMd(value) : undefined;
+}
+
+// Same as extractField but greedy across multiple lines until the next field-like line.
+function extractParagraph(body: string, nameRe: RegExp): string | undefined {
+  const re = new RegExp(
+    `(?:^|\\n)\\s*(?:[-*]\\s+)?\\*?\\*?(${nameRe.source})\\*?\\*?\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(?:[-*]\\s+)?\\*\\*[A-Z]|\\n\\s*###|\\z)`,
+    "i"
+  );
+  const m = body.match(re);
+  if (!m) return undefined;
+  const value = stripMd(m[2].trim());
+  return value.length > 0 ? value : undefined;
 }
 
 function parseRecommendations(md: string): ParsedRecommendation[] {
   const recs: ParsedRecommendation[] = [];
-  // Split by ### heading
   const sections = md.split(/^###\s+/m).filter((s) => s.trim().length > 0);
-  const headed = md.match(/^###\s+/m) ? (md.startsWith("###") ? sections : sections.slice(1)) : [];
+  const headed = md.match(/^###\s+/m)
+    ? md.startsWith("###")
+      ? sections
+      : sections.slice(1)
+    : [];
   for (const chunk of headed) {
     const [first, ...rest] = chunk.split("\n");
-    const headline = stripMd(first).replace(/^(?:Recommendation\s*)?(?:\d+[.:)]?\s*)/i, "").trim();
+    const headline = stripMd(first)
+      .replace(/^(?:Recommendation\s*)?(?:\d+[.:)]?\s*)/i, "")
+      .trim();
     if (!headline) continue;
     const body = rest.join("\n").trim();
 
-    const priorityMatch = body.match(/\*?\*?Priority[:\s]+\*?\*?\s*(High|Medium|Low)/i);
-    const rationaleMatch = body.match(/\*?\*?Rationale[:\s]+\*?\*?\s*([\s\S]*?)(?=\n\s*[-*]\s*\*?\*?(?:Supporting|Impact|Priority|Effort|Examples)|\n\s*\*\*|$)/i);
-    const impactMatch = body.match(/\*?\*?(?:Expected\s+)?Impact[:\s]+\*?\*?\s*([\s\S]*?)(?=\n\s*[-*]\s*\*?\*?(?:Priority|Supporting|Effort)|\n\s*\*\*|$)/i);
-    const effortMatch = body.match(/\*?\*?Effort[:\s]+\*?\*?\s*([\s\S]*?)(?=\n\s*[-*]\s*\*?\*?(?:Priority|Supporting)|\n\s*\*\*|$)/i);
-    const citesMatch = body.match(/\*?\*?(?:Supporting|Examples?|Cite[ds]?|Seen in)[:\s]+\*?\*?\s*([\s\S]*?)(?=\n\s*[-*]\s*\*?\*?(?:Priority|Impact|Effort)|\n\s*\*\*|$)/i);
+    const priorityRaw = extractField(body, /Priority/);
+    const priority = priorityRaw && /high|medium|low/i.test(priorityRaw)
+      ? (priorityRaw.match(/high|medium|low/i)![0].replace(
+          /^./,
+          (c) => c.toUpperCase()
+        ) as "High" | "Medium" | "Low")
+      : undefined;
+
+    // Recommendation field (Claude's separate sentence) becomes part of rationale.
+    const recSentence = extractParagraph(body, /Recommendation/);
+    const rationale = extractParagraph(body, /Rationale|Reasoning|Why/);
+    const composedRationale = [recSentence, rationale]
+      .filter(Boolean)
+      .join(" ");
+
+    const impact = extractParagraph(
+      body,
+      /Expected\s+(?:UX\s+)?Impact|Expected\s+(?:Business\s+)?Outcome|Impact/
+    );
+    const effort = extractParagraph(
+      body,
+      /Effort|Estimated\s+Effort|Cost|Build\s+Effort/
+    );
+    const citesText = extractParagraph(
+      body,
+      /Competitor\s+examples?|Supporting\s+examples?|Supporting\s+evidence|Supporting|Examples?|Cite[ds]?|Seen\s+in|Competitors/
+    );
 
     let cites: string[] | undefined;
-    if (citesMatch) {
-      const citeText = stripMd(citesMatch[1]);
-      cites = citeText
+    if (citesText) {
+      // Try splitting by comma/semicolon/bullet first.
+      const parts = citesText
         .split(/[,;·•\n]+/)
         .map((c) => c.replace(/^[-*]\s*/, "").trim())
-        .filter((c) => c.length > 0 && c.length < 60)
-        .slice(0, 4);
-    }
+        .filter((c) => c.length > 0 && c.length < 60);
 
-    const priority = priorityMatch
-      ? (priorityMatch[1] as "High" | "Medium" | "Low")
-      : undefined;
+      // If we got a single long sentence, try to extract Capitalized brand-like tokens.
+      if (parts.length <= 1) {
+        const tokens = citesText.match(/\b[A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?\b/g) || [];
+        // Filter common starter words like "The", "A", "While", "While", etc.
+        const STOPWORDS = new Set([
+          "The", "A", "An", "While", "And", "Or", "But", "For", "In", "On", "To",
+          "Both", "Their", "Its", "This", "That", "These", "Those", "All", "Most",
+          "Every", "Some", "None", "Only", "Each",
+        ]);
+        const brandTokens = [...new Set(tokens.filter((t) => !STOPWORDS.has(t)))];
+        if (brandTokens.length > 0) cites = brandTokens.slice(0, 4);
+      } else {
+        cites = parts.slice(0, 4);
+      }
+    }
 
     recs.push({
       priority,
       headline,
-      rationale: rationaleMatch ? stripMd(rationaleMatch[1].trim()).slice(0, 400) : undefined,
-      impact: impactMatch ? stripMd(impactMatch[1].trim()).slice(0, 200) : undefined,
-      effort: effortMatch ? stripMd(effortMatch[1].trim()).slice(0, 80) : undefined,
+      rationale: composedRationale
+        ? composedRationale.slice(0, 500).trim()
+        : undefined,
+      impact: impact ? impact.slice(0, 240).trim() : undefined,
+      effort: effort ? effort.slice(0, 80).trim() : undefined,
       cites,
       body,
     });

@@ -347,10 +347,10 @@ function Sidebar({
             boxShadow: `0 0 0 1px ${S.rule}`,
           }}
         >
-          J
+          B
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...Stype.body, fontSize: 13, color: S.bone }}>Jamie</div>
+          <div style={{ ...Stype.body, fontSize: 13, color: S.bone }}>Bruno</div>
           <div
             style={{
               ...Stype.body,
@@ -467,7 +467,7 @@ function LibraryView({
             letterSpacing: "-.02em",
           }}
         >
-          Welcome back, <span style={{ color: S.amberGlow }}>Jamie</span>.
+          Welcome back, <span style={{ color: S.amberGlow }}>Bruno</span>.
         </h1>
         <p style={{ ...Stype.reading, fontSize: 17, color: S.ink, margin: 0, maxWidth: 640 }}>
           {studies.length === 0
@@ -1853,6 +1853,15 @@ function SectionJourneys({
 }
 
 // ─── Section 05 — Insights ────────────────────────────────────────────────────
+function statFontSize(stat: string): number {
+  const len = stat.length;
+  if (len <= 4) return 80;
+  if (len <= 6) return 64;
+  if (len <= 9) return 48;
+  if (len <= 14) return 34;
+  return 26;
+}
+
 function SectionInsights({
   insights,
   fallbackMd,
@@ -1873,6 +1882,9 @@ function SectionInsights({
       </section>
     );
   }
+  // Limit to 4 for the bespoke grid layout; remaining insights are appended
+  // as a styled markdown fallback below the cards.
+  const featured = insights.slice(0, 4);
   return (
     <section id="insights" style={{ scrollMarginTop: 130, padding: "56px 48px" }}>
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
@@ -1884,39 +1896,61 @@ function SectionInsights({
           style={{
             display: "grid",
             gap: 18,
-            gridTemplateColumns: `repeat(auto-fit, minmax(220px, 1fr))`,
+            gridTemplateColumns:
+              featured.length === 4
+                ? "repeat(4, minmax(0, 1fr))"
+                : `repeat(auto-fit, minmax(240px, 1fr))`,
           }}
         >
-          {insights.map((ins, i) => {
+          {featured.map((ins, i) => {
             const aColor = i % 2 === 0 ? S.amberGlow : S.cobaltGlow;
+            const fs = statFontSize(ins.stat);
             return (
               <div
                 key={i}
                 style={{
-                  padding: "28px 24px",
+                  padding: "32px 26px",
                   background: "rgba(30,34,40,0.45)",
                   boxShadow: `0 0 0 1px ${S.hairline}`,
                   borderTop: `2px solid ${aColor}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 240,
                 }}
               >
                 <Eyebrow color={aColor} style={{ fontSize: 9 }}>
                   insight · 0{i + 1}
                 </Eyebrow>
-                <div style={{ marginTop: 18, display: "flex", alignItems: "baseline", gap: 6 }}>
+                <div
+                  style={{
+                    marginTop: 20,
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 6,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <span
                     style={{
                       fontFamily: "'Bricolage Grotesque', sans-serif",
                       fontVariationSettings: "'opsz' 96, 'wdth' 88, 'wght' 400",
-                      fontSize: ins.stat.length > 5 ? 38 : 64,
+                      fontSize: fs,
                       color: S.bone,
                       letterSpacing: "-.04em",
-                      lineHeight: 0.95,
+                      lineHeight: 0.9,
                     }}
                   >
                     {ins.stat}
                   </span>
                   {ins.suffix && (
-                    <span style={{ ...Stype.body, fontSize: 12, color: aColor, marginBottom: 8 }}>
+                    <span
+                      style={{
+                        ...Stype.body,
+                        fontSize: 13,
+                        color: aColor,
+                        marginBottom: Math.max(4, fs * 0.12),
+                      }}
+                    >
                       {ins.suffix}
                     </span>
                   )}
@@ -1924,10 +1958,11 @@ function SectionInsights({
                 <p
                   style={{
                     ...Stype.reading,
-                    fontSize: 13,
+                    fontSize: 13.5,
                     color: S.ink,
-                    marginTop: 14,
+                    marginTop: 18,
                     lineHeight: 1.5,
+                    flex: 1,
                   }}
                 >
                   {ins.body}
@@ -1942,84 +1977,175 @@ function SectionInsights({
 }
 
 // ─── Section 06 — Recommendations ────────────────────────────────────────────────
+function RecMiniShot({ accent }: { accent: string }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: 48,
+        padding: 4,
+        background: S.raisedWarm,
+        boxShadow: `0 0 0 1px rgba(232,227,210,0.08)`,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          background: S.raised,
+          padding: 6,
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        <div style={{ height: 4, width: 18, background: S.bone, opacity: 0.55 }} />
+        <div style={{ height: 3, background: S.dim }} />
+        <div style={{ height: 3, background: S.dim, width: "75%" }} />
+        <div style={{ height: 8, width: 22, background: accent, marginTop: "auto" }} />
+      </div>
+    </div>
+  );
+}
+
 function RecCard({
   rec,
   index,
   featured,
+  tone,
 }: {
   rec: ParsedRecommendation;
   index: number;
   featured?: boolean;
+  tone?: "primary" | "medium" | "low";
 }) {
-  const aColor = featured ? S.amberGlow : index % 2 === 0 ? S.cobaltGlow : S.amberGlow;
+  const aColor =
+    tone === "low"
+      ? S.soft
+      : tone === "medium"
+      ? S.cobaltGlow
+      : featured
+      ? S.amberGlow
+      : index % 2 === 0
+      ? S.cobaltGlow
+      : S.amberGlow;
+
+  const showEvidence = featured && rec.cites && rec.cites.length > 0;
+  const tag = tone === "low" ? "low" : tone === "medium" ? "medium" : featured ? "primary" : undefined;
+
   return (
     <div
       style={{
         padding: featured ? "32px 36px" : "24px 28px",
-        background: featured
-          ? "linear-gradient(135deg, rgba(48,40,28,0.92) 0%, rgba(35,31,24,0.94) 100%)"
-          : "linear-gradient(135deg, rgba(30,34,40,0.65) 0%, rgba(22,25,30,0.75) 100%)",
+        background:
+          tone === "low"
+            ? "linear-gradient(135deg, rgba(26,28,32,0.6) 0%, rgba(20,22,26,0.7) 100%)"
+            : featured
+            ? "linear-gradient(135deg, rgba(48,40,28,0.92) 0%, rgba(35,31,24,0.94) 100%)"
+            : "linear-gradient(135deg, rgba(30,34,40,0.65) 0%, rgba(22,25,30,0.75) 100%)",
         boxShadow: featured
           ? "0 0 0 1px rgba(244,204,125,0.40), 0 28px 60px -22px rgba(0,0,0,0.6), 0 0 100px -28px rgba(217,150,62,0.40)"
+          : tone === "low"
+          ? `0 0 0 1px ${S.hairline}, 0 12px 24px -12px rgba(0,0,0,0.45)`
           : `0 0 0 1px rgba(136,166,216,0.18), 0 18px 36px -18px rgba(0,0,0,0.5)`,
+        display: "grid",
+        gridTemplateColumns: showEvidence ? "1.4fr 1fr" : "1fr",
+        gap: showEvidence ? 36 : 0,
+        alignItems: "start",
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        {rec.priority && <PriorityTag level={rec.priority} />}
-        <span style={{ ...Stype.micro, fontSize: 9, color: S.soft }}>
-          recommendation · 0{index + 1}
-        </span>
-      </div>
-      <h3
-        style={{
-          ...Stype.title,
-          fontSize: featured ? 30 : 22,
-          color: S.bone,
-          margin: "14px 0 0",
-          lineHeight: 1.15,
-          letterSpacing: "-.015em",
-        }}
-      >
-        {rec.headline}
-      </h3>
-      {rec.rationale && (
-        <p
-          style={{
-            ...Stype.reading,
-            fontSize: featured ? 15 : 14,
-            color: S.ink,
-            marginTop: 14,
-            lineHeight: 1.55,
-          }}
-        >
-          {rec.rationale}
-        </p>
-      )}
-      {(rec.impact || rec.effort || rec.cites?.length) && (
-        <div
-          style={{
-            marginTop: 18,
-            paddingTop: 14,
-            borderTop: `1px solid ${S.rule}`,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 28,
-          }}
-        >
-          {rec.impact && <KeyValue label="impact" value={rec.impact} color={aColor} />}
-          {rec.effort && <KeyValue label="effort" value={rec.effort} />}
-          {rec.cites && rec.cites.length > 0 && (
-            <KeyValue
-              label="seen in"
-              value={rec.cites.join(" · ")}
-              color={S.soft}
-            />
-          )}
+      <div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+          {rec.priority && <PriorityTag level={rec.priority} />}
+          <span style={{ ...Stype.micro, fontSize: 9, color: S.soft }}>
+            recommendation{tag ? ` · ${tag}` : ""}
+          </span>
         </div>
-      )}
-      {!rec.rationale && !rec.impact && !rec.effort && (
-        <div style={{ marginTop: 14 }}>
-          <StudyMarkdown md={rec.body} />
+        <h3
+          style={{
+            ...Stype.title,
+            fontSize: featured ? 30 : 22,
+            color: S.bone,
+            margin: "16px 0 0",
+            lineHeight: 1.15,
+            letterSpacing: "-.015em",
+          }}
+        >
+          {rec.headline}
+        </h3>
+        {rec.rationale && (
+          <p
+            style={{
+              ...Stype.reading,
+              fontSize: featured ? 15 : 14,
+              color: S.ink,
+              marginTop: 14,
+              lineHeight: 1.55,
+              maxWidth: 620,
+            }}
+          >
+            {rec.rationale}
+          </p>
+        )}
+        {(rec.impact || rec.effort || rec.cites?.length) && (
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 14,
+              borderTop: `1px solid ${S.rule}`,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 28,
+            }}
+          >
+            {rec.impact && <KeyValue label="expected impact" value={rec.impact} color={aColor} />}
+            {rec.effort && <KeyValue label="effort" value={rec.effort} />}
+            {rec.cites && rec.cites.length > 0 && (
+              <KeyValue
+                label="seen in"
+                value={rec.cites.join(" · ")}
+                color={S.soft}
+              />
+            )}
+          </div>
+        )}
+        {!rec.rationale && !rec.impact && !rec.effort && (
+          <div style={{ marginTop: 14 }}>
+            <StudyMarkdown md={rec.body} />
+          </div>
+        )}
+      </div>
+
+      {showEvidence && rec.cites && (
+        <div>
+          <Eyebrow color={S.soft} style={{ fontSize: 9, marginBottom: 12 }}>
+            supporting evidence · {rec.cites.length} apps
+          </Eyebrow>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {rec.cites.map((app, i) => (
+              <div
+                key={app}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "72px 1fr",
+                  gap: 14,
+                  alignItems: "center",
+                  paddingBottom: 10,
+                  borderBottom:
+                    i < rec.cites!.length - 1 ? `1px solid ${S.hairline}` : 0,
+                  opacity: 0.92,
+                }}
+              >
+                <RecMiniShot accent={aColor} />
+                <div>
+                  <div style={{ ...Stype.bodyMed, fontSize: 13, color: S.bone }}>{app}</div>
+                  <div style={{ ...Stype.body, fontSize: 11.5, color: S.soft, marginTop: 2 }}>
+                    referenced in this recommendation
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -2058,7 +2184,12 @@ function SectionRecommendations({
       </section>
     );
   }
-  const [primary, ...rest] = recs;
+
+  // Split: first = primary featured, next 2 = medium 2-up, remainder = low full-width.
+  const primary = recs[0];
+  const middle = recs.slice(1, 3);
+  const tail = recs.slice(3);
+
   return (
     <section
       id="recommendations"
@@ -2073,21 +2204,41 @@ function SectionRecommendations({
           eyebrow="§06 · product-specific recommendations"
           title="What we'd try, in order."
         />
-        <RecCard rec={primary} index={0} featured />
-        {rest.length > 0 && (
+        <RecCard rec={primary} index={0} featured tone="primary" />
+
+        {middle.length > 0 && (
           <div
             style={{
               marginTop: 18,
               display: "grid",
               gap: 18,
-              gridTemplateColumns: rest.length === 1 ? "1fr" : "repeat(auto-fill, minmax(360px, 1fr))",
+              gridTemplateColumns: middle.length === 1 ? "1fr" : "1fr 1fr",
             }}
           >
-            {rest.map((rec, i) => (
-              <RecCard key={rec.headline + i} rec={rec} index={i + 1} />
+            {middle.map((rec, i) => (
+              <RecCard
+                key={rec.headline + i}
+                rec={rec}
+                index={i + 1}
+                tone={rec.priority === "Low" ? "low" : "medium"}
+              />
             ))}
           </div>
         )}
+
+        {tail.length > 0 && (
+          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 18 }}>
+            {tail.map((rec, i) => (
+              <RecCard
+                key={rec.headline + i}
+                rec={rec}
+                index={i + 3}
+                tone={rec.priority === "Low" ? "low" : "medium"}
+              />
+            ))}
+          </div>
+        )}
+
         <div style={{ marginTop: 36 }}>
           <BuildCTA onPrototype={onPrototype} />
         </div>
