@@ -1,9 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-<<<<<<< Updated upstream
-import type { MobbinScreenshot, PrototypeInterviewAnswers, Recommendation } from "@/types";
+import type { PrototypeInterviewAnswers, Recommendation } from "@/types";
 import { IMPROVEMENT_AREA_OPTIONS } from "@/types";
-=======
->>>>>>> Stashed changes
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -20,27 +17,54 @@ Search strategy:
 2. Fetch detail for the most relevant screens using get_screen_detail
 3. Analyze what you find and produce the report
 
-Produce a structured UX intelligence report with exactly these 6 sections:
+Produce a structured UX intelligence report with exactly these 6 sections. Follow the formatting rules below precisely — the UI depends on them.
 
 # 1. Executive Summary
 A high-level overview of what products were analyzed, key UX trends, major strengths/weaknesses, and top recommendations.
 
 # 2. Competitor Feature Matrix
-A markdown table comparing key UX decisions across products (e.g. goal selection, account creation timing, progress bar, social proof, etc.)
+A markdown table comparing key UX decisions across products (e.g. goal selection, account creation timing, progress bar, social proof, etc.). Use ✓ / ✗ for binary decisions.
 
 # 3. UX Pattern Analysis
-The top 3–5 recurring UX patterns with: description, frequency across competitors, why it works, and tradeoffs.
+The top 3–5 recurring UX patterns. For EACH pattern use this exact format:
+
+### [Pattern Name]
+- **Frequency:** How many apps use it (e.g. "4 of 5 apps")
+- **What it is:** Description of the pattern
+- **Why it works:** The user psychology behind it
+- **Tradeoff:** When it can backfire
 
 # 4. Screenshot Journey Map
-Narrate the flow step-by-step for each competitor. Describe what happens at each screen, key decision moments, and where friction or motivation is introduced.
+For EACH competitor app use this exact format:
+
+### [App Name]
+1. **[Screen name]** — What the user sees and the key UX decision
+2. Continue for each step...
+
+Add 1–2 sentences after the steps on friction, motivation, and what makes this app distinctive.
+In section 4, embed the actual screenshots inline using markdown image syntax wherever possible:
+![App Name — Screen Description](image_url)
 
 # 5. Comparative Insights
-3–5 stat-style callouts. Examples: "78% of top apps use progress indicators during onboarding", "Most competitors defer sign-up until after value demonstration."
+3–5 stat-style callouts. Use this format for each:
+> **[X of N apps] [do something]** — [1–2 sentences explaining what this signals]
 
 # 6. Product Recommendations
-5 prioritized recommendations tailored to the product context. Each must include: the recommendation, rationale, supporting competitor examples, expected UX impact, and priority (High/Medium/Low).
+Exactly 5 prioritized recommendations. For EACH use this exact format — blank lines between fields are required:
 
-Be specific. Reference actual app names and screens you found. Use concrete, actionable language. Format everything in clean markdown.
+### [N]. [Short action-oriented title]
+
+**Priority:** High / Medium / Low
+
+**Recommendation:** [One clear actionable instruction starting with a verb]
+
+**Rationale:** Why this matters, grounded in competitor patterns
+
+**Competitor examples:** Which specific apps do this and how
+
+**Expected UX impact:** What metric or behavior should improve
+
+Be specific. Reference actual app names and screens. Use concrete, actionable language. Format everything in clean markdown.
 
 Product category: {category}
 Flow type: {flow_type}`;
@@ -59,9 +83,6 @@ The prompt should:
 
 Format the output as a single code block containing the prompt text — nothing else.`;
 
-<<<<<<< Updated upstream
-/* ── Report generation (unchanged) ── */
-=======
 const MOBBIN_MCP_URL = "https://api.mobbin.com/mcp";
 
 function getMobbinMcpServers() {
@@ -76,7 +97,8 @@ function getMobbinMcpServers() {
     },
   ];
 }
->>>>>>> Stashed changes
+
+/* ── Report generation ── */
 
 export async function generateReport(
   category: string,
@@ -103,7 +125,7 @@ export async function generateReport(
 
 In section 4 (Screenshot Journey Map), reference each screenshot by its position number (e.g. "Screenshot 1 — Coinbase home screen") in the order they appear below. Produce the full 6-section UX intelligence report.`,
       },
-      ...fallbackImages.map((img, i) => ({
+      ...fallbackImages.map((img) => ({
         type: "image" as const,
         source: {
           type: "base64" as const,
@@ -122,7 +144,7 @@ In section 4 (Screenshot Journey Map), reference each screenshot by its position
 
   const requestParams: Parameters<typeof client.messages.create>[0] = {
     model: MODEL,
-    max_tokens: 8096,
+    max_tokens: 8192,
     system: systemPrompt,
     messages: [{ role: "user" as const, content: userMessage }],
     ...(mcpServers && { mcp_servers: mcpServers }),
@@ -132,19 +154,27 @@ In section 4 (Screenshot Journey Map), reference each screenshot by its position
     headers: mcpServers
       ? { "anthropic-beta": "mcp-client-2025-11-20" }
       : undefined,
-  });
+  }) as Anthropic.Message;
 
-  // collect all text blocks (Claude may interleave tool calls with text)
-  const text = response.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as { type: "text"; text: string }).text)
+  // Collect all text blocks (Claude may interleave tool calls with text)
+  const raw = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
     .join("\n\n");
+
+  // Strip MCP tool-call XML that leaks into the text stream
+  // e.g. <mobbin_search_screens>...</mobbin_search_screens>
+  const text = raw
+    .replace(/<[a-z_]+(?:\s[^>]*)?>[\s\S]*?<\/[a-z_]+>/g, "")
+    .replace(/<\/?[a-z_]+(?:\s[^>]*)?>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   if (!text) throw new Error("No text in response");
   return text;
 }
 
-/* ── Prototype prompt generation (v5 branching) ── */
+/* ── Prototype prompt generation ── */
 
 function buildRecommendationsBlock(recs: Recommendation[]): string {
   return recs
@@ -159,11 +189,9 @@ function extractPatternsAndBenchmarks(report: string): {
   patterns: string;
   benchmarks: string;
 } {
-  // Extract UX Pattern Analysis (Section 3)
   const patternMatch = report.match(
     /#{1,3}\s*(?:3\.?\s*)?UX Pattern Analysis.*?\n([\s\S]*?)(?=\n#{1,3}\s)/i
   );
-  // Extract Comparative Insights (Section 5)
   const insightMatch = report.match(
     /#{1,3}\s*(?:5\.?\s*)?Comparative Insights.*?\n([\s\S]*?)(?=\n#{1,3}\s)/i
   );
@@ -180,7 +208,12 @@ function extractPatternsAndBenchmarks(report: string): {
   const benchmarks = insightMatch
     ? insightMatch[1]
         .split("\n")
-        .filter((l) => l.trim().startsWith("-") || l.trim().startsWith("*") || /^\d/.test(l.trim()))
+        .filter(
+          (l) =>
+            l.trim().startsWith("-") ||
+            l.trim().startsWith("*") ||
+            /^\d/.test(l.trim())
+        )
         .slice(0, 4)
         .map((l) => l.trim())
         .join("\n")
@@ -305,7 +338,6 @@ export async function generatePrototypePrompt(
   answers: PrototypeInterviewAnswers,
   recommendations: Recommendation[]
 ): Promise<string> {
-  // Build the user-facing prompt based on branch
   const builtPrompt =
     answers.flow === "improve"
       ? buildImprovePrompt(answers, recommendations, report)

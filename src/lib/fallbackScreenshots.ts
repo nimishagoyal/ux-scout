@@ -14,9 +14,10 @@ export interface FallbackImage {
 }
 
 const SELECTED: { folder: string; appName: string; indices: number[] }[] = [
-  { folder: "Coinbase iOS Buying crypto", appName: "Coinbase", indices: [0, 1] },
-  { folder: "Kraken iOS Buying a coin", appName: "Kraken", indices: [0, 1] },
-  { folder: "Binance iOS Buying with USD", appName: "Binance", indices: [0, 1] },
+  { folder: "Coinbase iOS Buying crypto", appName: "Coinbase", indices: [0, 1, 2, 3] },
+  { folder: "Kraken iOS Buying a coin", appName: "Kraken", indices: [0, 1, 2, 3] },
+  { folder: "Binance iOS Buying with USD", appName: "Binance", indices: [0, 1, 2, 3] },
+  { folder: "Crypto.com iOS Buying a coin (recurring buy)", appName: "Crypto.com", indices: [0, 1, 2, 3] },
 ];
 
 export function loadFallbackScreenshots(): FallbackImage[] {

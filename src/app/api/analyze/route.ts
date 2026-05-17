@@ -2,20 +2,11 @@
  * POST /api/analyze
  * Nimisha + Jose own this endpoint.
  *
-<<<<<<< Updated upstream
- * 1. Fetch screenshots from Mobbin (Nimisha)
- * 2. Pass them to the Claude agent for analysis (Jose)
- * 3. Return the report markdown + screenshots used
- */
-
-import { NextRequest, NextResponse } from "next/server";
-import { fetchScreenshots } from "@/lib/mobbin";
-import { generateReport } from "@/lib/agent";
-import type { AnalyzeRequest, AnalyzeResponse } from "@/types";
-=======
- * Strategy:
- *   - If ANTHROPIC_API_KEY is set, call Claude directly (with Mobbin MCP if token available)
- *   - Mobbin MCP is accessed via the Claude Code CLI, which holds the OAuth session
+ * Strategy (in priority order):
+ *   1. CLI path — runs `claude -p` with Mobbin MCP tools for live screenshots
+ *   2. Direct API path — claude.ts with Mobbin MCP via mcp_servers (if MOBBIN_AUTH_TOKEN set)
+ *   3. Fallback screenshots — base64 images from public/ via fallbackScreenshots.ts
+ *   4. Knowledge-based — Claude uses its training knowledge of top apps
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -36,36 +27,57 @@ STEP 1 — Search Mobbin:
 - For each app, call get_screen_detail on 2-3 screens to get the actual images
 - Note the image URLs returned by get_screen_detail
 
-STEP 2 — Write the report in markdown with EXACTLY these 6 sections:
+STEP 2 — Write the report in markdown with EXACTLY these 6 sections. Follow the formatting rules precisely.
 
 # 1. Executive Summary
 
 # 2. Competitor Feature Matrix
-(markdown table comparing key UX decisions across apps)
+(markdown table comparing key UX decisions across apps — use ✓ / ✗)
 
 # 3. UX Pattern Analysis
-(top 3-5 recurring patterns with description, frequency, why it works)
+For EACH pattern use this format:
+### [Pattern Name]
+- **Frequency:** X of N apps
+- **What it is:** ...
+- **Why it works:** ...
+- **Tradeoff:** ...
 
 # 4. Screenshot Journey Map
-For each app, embed the actual screenshots inline using markdown image syntax:
-![App Name — Screen Description](image_url)
-Then narrate what is happening at each step of the flow.
+For EACH app use this format:
+### [App Name]
+1. **[Screen name]** — description
+2. ...
+Embed real screenshots: ![App — Screen](image_url)
 
 # 5. Comparative Insights
-(3-5 stat-style callouts)
+> **[X of N apps] [do something]** — explanation
 
 # 6. Product Recommendations
-(5 prioritized recommendations with rationale, competitor examples, priority level)
+For EACH of the 5 recommendations use this format (blank lines between fields required):
 
-IMPORTANT: In section 4, always embed the real screenshot images using ![description](url) — do not skip the images.
+### [N]. [Short title]
+
+**Priority:** High / Medium / Low
+
+**Recommendation:** [verb-led action]
+
+**Rationale:** ...
+
+**Competitor examples:** ...
+
+**Expected UX impact:** ...
+
 Be specific. Reference actual app names. Use concrete, actionable language.
 `.trim();
 
-async function generateReportViaCLI(category: string, flowType: string): Promise<string> {
-  const prompt = CLI_PROMPT(category, flowType).replace(/"/g, '\\"').replace(/\n/g, " ");
+async function generateReportViaCLI(
+  category: string,
+  flowType: string
+): Promise<string> {
+  const prompt = CLI_PROMPT(category, flowType)
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, " ");
 
-  // claude -p runs a non-interactive one-shot query and exits
-  // --allowedTools lets it use the Mobbin MCP tools
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
@@ -90,7 +102,6 @@ async function generateReportViaCLI(category: string, flowType: string): Promise
   if (stderr && !stdout) throw new Error(stderr);
   return stdout.trim();
 }
->>>>>>> Stashed changes
 
 export async function POST(req: NextRequest) {
   try {
@@ -104,46 +115,68 @@ export async function POST(req: NextRequest) {
       );
     }
 
-<<<<<<< Updated upstream
-    // Step 1: fetch screenshots from Mobbin (returns [] if MCP not connected)
-    const mobbinScreenshots = await fetchScreenshots(category, flowType);
-
-    // Map MobbinScreenshot → AgentScreenshot (normalize field names)
-    const screenshots = mobbinScreenshots.map((s) => ({
-      appName: s.appName,
-      url: s.imageUrl,
-      stepLabel: s.stepLabel,
-    }));
-
-    // Step 2: generate the 6-section report via Claude agent
-    const report = await generateReport({
-      category,
-      flowType,
-      screenshots,
-      competitors,
-    });
-
-    const response: AnalyzeResponse = { report, screenshots: mobbinScreenshots };
-    return NextResponse.json(response);
-=======
     let report: string;
+    let screenshots: object[] = [];
 
-    // 1. Try CLI path (live Mobbin MCP access)
-    // 2. Fall back to direct API with local fallback screenshots
-    // 3. Last resort: knowledge-based only
+    // Extract ![alt](url) images embedded by Claude in the report
+    function extractEmbeddedScreenshots(md: string): object[] {
+      const regex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
+      const found: object[] = [];
+      let match;
+      while ((match = regex.exec(md)) !== null) {
+        const alt = match[1]; // e.g. "Coinbase — Home Screen"
+        const url = match[2];
+        const appName = alt.split(/[—–-]/)[0].trim() || "App";
+        found.push({
+          id: `embedded-${found.length}`,
+          appName,
+          imageUrl: url,
+          flowType,
+          platform: "ios",
+          stepLabel: alt.split(/[—–-]/).slice(1).join("—").trim() || undefined,
+        });
+      }
+      return found;
+    }
+
     try {
+      // Path 1: CLI with live Mobbin MCP
       report = await generateReportViaCLI(category, flowType);
+      screenshots = extractEmbeddedScreenshots(report);
     } catch (cliErr) {
-      console.warn("[/api/analyze] CLI path failed, trying fallback screenshots:", cliErr);
+      console.warn(
+        "[/api/analyze] CLI path failed, falling back to direct API:",
+        cliErr
+      );
+      // Path 2 & 3: direct API (uses Mobbin MCP token if set, else fallback screenshots, else knowledge)
       const fallbackImages = loadFallbackScreenshots();
-      report = await generateReport(category, flowType, fallbackImages.length > 0 ? fallbackImages : undefined);
-      if (fallbackImages.length > 0) {
+      report = await generateReport(
+        category,
+        flowType,
+        fallbackImages.length > 0 ? fallbackImages : undefined
+      );
+
+      // Check if Claude embedded Mobbin image URLs in the report (API MCP path)
+      const embedded = extractEmbeddedScreenshots(report);
+      if (embedded.length > 0) {
+        screenshots = embedded;
+      } else if (fallbackImages.length > 0) {
+        // Fall back to returning the base64 images we sent to Claude
         console.log(`[/api/analyze] Used ${fallbackImages.length} fallback screenshots`);
+        screenshots = fallbackImages.map((img, i) => ({
+          id: `fallback-${i}`,
+          appName: img.appName,
+          imageUrl: `data:${img.mediaType};base64,${img.base64}`,
+          flowType,
+          platform: "ios",
+          stepLabel: img.filename
+            .replace(/\.png$|\.jpg$/i, "")
+            .replace(/^\S+ \d+$/, `Screen ${i + 1}`),
+        }));
       }
     }
 
-    return NextResponse.json({ report });
->>>>>>> Stashed changes
+    return NextResponse.json({ report, screenshots });
   } catch (err) {
     console.error("[/api/analyze]", err);
     return NextResponse.json(

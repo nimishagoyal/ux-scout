@@ -7,8 +7,7 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import type { FlowType, AnalyzeRequest, UploadedImage } from "@/types";
-import ScreenshotUpload from "./ScreenshotUpload";
+import type { FlowType, AnalyzeRequest } from "@/types";
 
 const FLOW_OPTIONS: { value: FlowType; label: string }[] = [
   { value: "onboarding", label: "Onboarding" },
@@ -28,12 +27,11 @@ interface SearchFormProps {
 export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
   const [category, setCategory] = useState("fintech apps");
   const [flowType, setFlowType] = useState<FlowType>("onboarding");
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!category.trim()) return;
-    onSubmit({ category: category.trim(), flowType, uploadedImages });
+    onSubmit({ category: category.trim(), flowType });
   }
 
   return (
@@ -84,13 +82,6 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
         )}
       </button>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
-          Upload Screenshots{" "}
-          <span className="font-normal text-gray-400">(optional — used if Mobbin isn't available)</span>
-        </label>
-        <ScreenshotUpload images={uploadedImages} onChange={setUploadedImages} />
-      </div>
     </form>
   );
 }

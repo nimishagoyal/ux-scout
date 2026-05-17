@@ -8,7 +8,7 @@ interface ScreenshotJourneyProps {
 }
 
 function isRealUrl(url: string) {
-  return url.startsWith("https://") && !url.includes("placeholder");
+  return (url.startsWith("https://") || url.startsWith("data:")) && !url.includes("placeholder");
 }
 
 export default function ScreenshotJourney({ screenshots }: ScreenshotJourneyProps) {

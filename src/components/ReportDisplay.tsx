@@ -158,6 +158,26 @@ const components: Components = {
     <li className="mb-1.5 leading-relaxed text-gray-700">{children}</li>
   ),
 
+  // ── Inline images (from Mobbin URLs embedded by Claude) ──────────────────
+  img: ({ src, alt }) => {
+    if (!src) return null;
+    return (
+      <span className="my-4 flex flex-col items-start gap-1.5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt ?? ""}
+          className="max-h-[480px] w-auto rounded-2xl shadow-lg ring-1 ring-gray-200"
+          crossOrigin="anonymous"
+          loading="lazy"
+        />
+        {alt && (
+          <span className="text-xs text-gray-400 italic">{alt}</span>
+        )}
+      </span>
+    );
+  },
+
   // ── Code ──────────────────────────────────────────────────────────────────
   code: ({ className, children }) => {
     const isBlock = className?.includes("language-");

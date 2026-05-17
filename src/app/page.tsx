@@ -13,6 +13,7 @@ import { Telescope } from "lucide-react";
 import SearchForm from "@/components/SearchForm";
 import ReportDisplay from "@/components/ReportDisplay";
 import ExportButtons from "@/components/ExportButtons";
+import ScreenshotJourney from "@/components/ScreenshotJourney";
 import PrototypeInterview from "@/components/PrototypeInterview";
 import PrototypePromptOutput from "@/components/PrototypePromptOutput";
 import type { AnalyzeRequest, MobbinScreenshot } from "@/types";
@@ -114,6 +115,9 @@ export default function HomePage() {
             <ExportButtons reportMarkdown={report} />
           </div>
           <ReportDisplay report={report} />
+          {screenshots.length > 0 && (
+            <ScreenshotJourney screenshots={screenshots} />
+          )}
         </div>
       )}
 
