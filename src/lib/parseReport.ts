@@ -28,6 +28,7 @@ export interface ParsedJourney {
   app: string;
   steps: { name: string; hint: string }[];
   body: string;
+  imageUrls: string[];
 }
 
 export interface ParsedInsight {
@@ -194,6 +195,16 @@ function parsePatterns(md: string): ParsedPattern[] {
   return patterns;
 }
 
+function extractImageUrls(body: string): string[] {
+  const re = /!\[[^\]]*\]\(((?:https?:\/\/|\/)[^)]+)\)/g;
+  const urls: string[] = [];
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    urls.push(m[1]);
+  }
+  return urls;
+}
+
 function parseJourneys(md: string, competitorsHint: string[]): ParsedJourney[] {
   const journeys: ParsedJourney[] = [];
   // Try splitting by ### headings first
@@ -205,7 +216,7 @@ function parseJourneys(md: string, competitorsHint: string[]): ParsedJourney[] {
     if (!app) continue;
     const body = rest.join("\n").trim();
     const steps = extractSteps(body);
-    journeys.push({ app, steps, body });
+    journeys.push({ app, steps, body, imageUrls: extractImageUrls(body) });
   }
   // Fallback: split by bold competitor names
   if (journeys.length === 0 && competitorsHint.length > 0) {
@@ -221,7 +232,7 @@ function parseJourneys(md: string, competitorsHint: string[]): ParsedJourney[] {
         .sort((a, b) => a - b)[0];
       const end = nextName ?? remaining.length;
       const body = remaining.slice(start + name.length, end).trim();
-      journeys.push({ app: name, steps: extractSteps(body), body });
+      journeys.push({ app: name, steps: extractSteps(body), body, imageUrls: extractImageUrls(body) });
     }
   }
   return journeys;

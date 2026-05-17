@@ -1728,38 +1728,47 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                   justifyContent: "flex-start",
                 }}
               >
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    background: S.raised,
-                    padding: 10,
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: 6,
-                      width: 30,
-                      background: S.bone,
-                      opacity: 0.6,
-                      marginBottom: 8,
-                    }}
+                {journey.imageUrls[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={journey.imageUrls[i]}
+                    alt={`${journey.app} — ${step.name}`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
                   />
+                ) : (
                   <div
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
+                      width: "100%",
+                      height: "100%",
+                      background: S.raised,
+                      padding: 10,
+                      position: "relative",
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{ height: 4, background: S.dim }} />
-                    <div style={{ height: 4, background: S.dim, width: "80%" }} />
-                    <div style={{ height: 4, background: S.dim, width: "60%" }} />
-                    <div style={{ height: 12, width: 32, background: aColor, marginTop: 4 }} />
+                    <div
+                      style={{
+                        height: 6,
+                        width: 30,
+                        background: S.bone,
+                        opacity: 0.6,
+                        marginBottom: 8,
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <div style={{ height: 4, background: S.dim }} />
+                      <div style={{ height: 4, background: S.dim, width: "80%" }} />
+                      <div style={{ height: 4, background: S.dim, width: "60%" }} />
+                      <div style={{ height: 12, width: 32, background: aColor, marginTop: 4 }} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div style={{ marginTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>

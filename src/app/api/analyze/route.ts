@@ -102,6 +102,29 @@ async function generateReportViaCLI(
   return stdout.trim();
 }
 
+// After Claude generates the report using fallback images, inject the public
+// image URLs as markdown images into each app's journey section so the UI
+// can render actual screenshots instead of wireframe placeholders.
+function injectFallbackImageUrls(
+  report: string,
+  fallbackImages: import("@/lib/fallbackScreenshots").FallbackImage[]
+): string {
+  const byApp: Record<string, string[]> = {};
+  for (const img of fallbackImages) {
+    if (!byApp[img.appName]) byApp[img.appName] = [];
+    byApp[img.appName].push(img.publicUrl);
+  }
+
+  return report.replace(/^(### )(.+)$/gm, (match, _prefix, name) => {
+    const urls = byApp[name.trim()];
+    if (!urls || urls.length === 0) return match;
+    const imgTags = urls
+      .map((url, i) => `![${name.trim()} — Screenshot ${i + 1}](${url})`)
+      .join("\n");
+    return `${match}\n${imgTags}`;
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: AnalyzeRequest = await req.json();
@@ -136,6 +159,9 @@ export async function POST(req: NextRequest) {
         flowType,
         fallbackImages.length > 0 ? fallbackImages : undefined
       );
+      if (fallbackImages.length > 0) {
+        report = injectFallbackImageUrls(report, fallbackImages);
+      }
     }
 
     return NextResponse.json({ report });

@@ -11,6 +11,7 @@ export interface FallbackImage {
   filename: string;
   base64: string;
   mediaType: "image/png" | "image/jpeg";
+  publicUrl: string;
 }
 
 const SELECTED: { folder: string; appName: string; indices: number[] }[] = [
@@ -36,6 +37,7 @@ export function loadFallbackScreenshots(): FallbackImage[] {
         filename,
         base64: buffer.toString("base64"),
         mediaType: "image/png",
+        publicUrl: `/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`,
       });
     }
   }
