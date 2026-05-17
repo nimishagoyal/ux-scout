@@ -1,9 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-<<<<<<< Updated upstream
-import type { MobbinScreenshot, PrototypeInterviewAnswers, Recommendation } from "@/types";
+import type { PrototypeInterviewAnswers, Recommendation } from "@/types";
 import { IMPROVEMENT_AREA_OPTIONS } from "@/types";
-=======
->>>>>>> Stashed changes
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -59,9 +56,6 @@ The prompt should:
 
 Format the output as a single code block containing the prompt text — nothing else.`;
 
-<<<<<<< Updated upstream
-/* ── Report generation (unchanged) ── */
-=======
 const MOBBIN_MCP_URL = "https://api.mobbin.com/mcp";
 
 function getMobbinMcpServers() {
@@ -76,7 +70,6 @@ function getMobbinMcpServers() {
     },
   ];
 }
->>>>>>> Stashed changes
 
 export async function generateReport(
   category: string,
