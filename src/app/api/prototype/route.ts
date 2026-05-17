@@ -2,38 +2,33 @@
  * POST /api/prototype
  * Muyun owns this endpoint.
  *
- * Takes the generated report + 3-question interview answers,
+ * Takes the generated report + branching interview answers + selected recommendations,
  * returns a Lovable/Bolt-ready prototype prompt.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { generatePrototypePrompt } from "@/lib/claude";
+import type { PrototypeInterviewAnswers, Recommendation } from "@/types";
 
 interface PrototypeRequest {
   report: string;
-  productDescription: string;
-  targetUser: string;
-  topGoal: string;
+  answers: PrototypeInterviewAnswers;
+  recommendations: Recommendation[];
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body: PrototypeRequest = await req.json();
-    const { report, productDescription, targetUser, topGoal } = body;
+    const { report, answers, recommendations } = body;
 
-    if (!report || !productDescription || !targetUser || !topGoal) {
+    if (!report || !answers || !recommendations || recommendations.length === 0) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Report, answers, and at least one recommendation are required." },
         { status: 400 }
       );
     }
 
-    const prompt = await generatePrototypePrompt(
-      report,
-      productDescription,
-      targetUser,
-      topGoal
-    );
+    const prompt = await generatePrototypePrompt(report, answers, recommendations);
 
     return NextResponse.json({ prompt });
   } catch (err) {

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { MobbinScreenshot } from "@/types";
+import type { MobbinScreenshot, PrototypeInterviewAnswers, Recommendation } from "@/types";
+import { IMPROVEMENT_AREA_OPTIONS } from "@/types";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -46,8 +47,11 @@ The prompt should:
 - Be tailored to the user's product, target user, and top goal
 - Be detailed enough that pasting it directly into Lovable produces a real, working prototype
 - Include specific UI details: screens, flows, components, copy tone, visual style
+- Include realistic placeholder data
 
 Format the output as a single code block containing the prompt text — nothing else.`;
+
+/* ── Report generation (unchanged) ── */
 
 export async function generateReport(
   category: string,
@@ -83,12 +87,173 @@ export async function generateReport(
   return content.text;
 }
 
+/* ── Prototype prompt generation (v5 branching) ── */
+
+function buildRecommendationsBlock(recs: Recommendation[]): string {
+  return recs
+    .map(
+      (r, i) =>
+        `${i + 1}. ${r.text} (${r.priority.toUpperCase()} PRIORITY)\n   ${r.rationale}${r.competitors ? `\n   Seen in: ${r.competitors}` : ""}`
+    )
+    .join("\n\n");
+}
+
+function extractPatternsAndBenchmarks(report: string): {
+  patterns: string;
+  benchmarks: string;
+} {
+  // Extract UX Pattern Analysis (Section 3)
+  const patternMatch = report.match(
+    /#{1,3}\s*(?:3\.?\s*)?UX Pattern Analysis.*?\n([\s\S]*?)(?=\n#{1,3}\s)/i
+  );
+  // Extract Comparative Insights (Section 5)
+  const insightMatch = report.match(
+    /#{1,3}\s*(?:5\.?\s*)?Comparative Insights.*?\n([\s\S]*?)(?=\n#{1,3}\s)/i
+  );
+
+  const patterns = patternMatch
+    ? patternMatch[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-") || l.trim().startsWith("*"))
+        .slice(0, 5)
+        .map((l) => l.trim())
+        .join("\n")
+    : "- Progressive disclosure\n- Social proof elements\n- Max 2 inputs per screen\n- Instant value preview after core action";
+
+  const benchmarks = insightMatch
+    ? insightMatch[1]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-") || l.trim().startsWith("*") || /^\d/.test(l.trim()))
+        .slice(0, 4)
+        .map((l) => l.trim())
+        .join("\n")
+    : "78% use progress indicators. Average onboarding: 4 screens.";
+
+  return { patterns, benchmarks };
+}
+
+function buildImprovePrompt(
+  answers: PrototypeInterviewAnswers,
+  recs: Recommendation[],
+  report: string
+): string {
+  const { patterns, benchmarks } = extractPatternsAndBenchmarks(report);
+
+  const areaLabels = answers.improvementAreas.map((val) => {
+    const opt = IMPROVEMENT_AREA_OPTIONS.find((o) => o.value === val);
+    return opt ? opt.label : val;
+  });
+
+  const detailLine = answers.improvementDetail
+    ? `\n${answers.improvementDetail}`
+    : "";
+
+  const customSection = answers.customFeatures
+    ? `\nADDITIONAL FEATURES:\n${answers.customFeatures}\n`
+    : "";
+
+  return `I have an existing product and want to improve it based on competitive research.
+
+AREA OF FOCUS:
+${areaLabels.map((a) => `- ${a}`).join("\n")}${detailLine}
+
+RECOMMENDATIONS TO IMPLEMENT (from competitive UX analysis):
+
+${buildRecommendationsBlock(recs)}
+${customSection}
+SUPPORTING UX PATTERNS FROM RESEARCH:
+${patterns}
+
+INDUSTRY BENCHMARKS:
+${benchmarks}
+
+Build a prototype showing how my product would look with these improvements.
+Focus on the screens and flows most affected by the changes.
+
+SCREENS TO INCLUDE:
+1. The improved flow for the focus area above
+2. Redesigned home / main screen reflecting changes
+3. One feature screen showing the biggest single improvement
+4. Any new screens needed for the recommended changes
+
+Realistic placeholder data. Polished, investor-demo ready.`;
+}
+
+function buildNewProductPrompt(
+  answers: PrototypeInterviewAnswers,
+  recs: Recommendation[],
+  report: string
+): string {
+  const { patterns, benchmarks } = extractPatternsAndBenchmarks(report);
+
+  const qualLine = answers.targetUserQualitative
+    ? ` ${answers.targetUserQualitative}`
+    : "";
+
+  const customSection = answers.customFeatures
+    ? `\nADDITIONAL FEATURES:\n${answers.customFeatures}\n`
+    : "";
+
+  return `Build me a new product: ${answers.productDescription}
+
+TARGET USER:
+${answers.targetUser}.${qualLine}
+
+---
+
+RECOMMENDATIONS TO INCORPORATE (from competitive UX analysis):
+These are the specific product recommendations from analyzing the
+competitive landscape. Build them into the prototype:
+
+${buildRecommendationsBlock(recs)}
+${customSection}
+---
+
+SUPPORTING UX PATTERNS FROM RESEARCH:
+${patterns}
+
+INDUSTRY BENCHMARKS:
+${benchmarks}
+
+---
+
+SCREENS TO INCLUDE:
+
+1. WELCOME SCREEN
+   - One-line value proposition
+   - Primary CTA
+   - Apply relevant recommendations above
+
+2. ONBOARDING FLOW (2–4 screens)
+   - One task per screen, progress indicator
+   - Max 2 input fields per screen
+   - Drive toward the "aha moment"
+
+3. SUCCESS / HOME SCREEN
+   - Celebrate completion
+   - Immediate value preview
+   - Clear next actions
+
+4. ONE KEY FEATURE SCREEN
+   - Most impressive capability
+   - Should reflect the recommendations selected
+
+---
+
+Realistic placeholder data. Mobile-responsive. Investor-demo ready.`;
+}
+
 export async function generatePrototypePrompt(
   report: string,
-  productDescription: string,
-  targetUser: string,
-  topGoal: string
+  answers: PrototypeInterviewAnswers,
+  recommendations: Recommendation[]
 ): Promise<string> {
+  // Build the user-facing prompt based on branch
+  const builtPrompt =
+    answers.flow === "improve"
+      ? buildImprovePrompt(answers, recommendations, report)
+      : buildNewProductPrompt(answers, recommendations, report);
+
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 2048,
@@ -96,7 +261,7 @@ export async function generatePrototypePrompt(
     messages: [
       {
         role: "user",
-        content: `UX Intelligence Report:\n${report}\n\n---\n\nMy product: ${productDescription}\nMy target user: ${targetUser}\nTop goal I want to achieve: ${topGoal}\n\nGenerate the Lovable/Bolt prototype prompt.`,
+        content: `UX Intelligence Report:\n${report}\n\n---\n\nUser's prototype request:\n${builtPrompt}\n\nGenerate the final Lovable/Bolt prototype prompt. Make it highly specific, with real screen details, UI components, copy text, and visual style. The output should be a single prompt that can be pasted directly into Lovable to produce a working prototype.`,
       },
     ],
   });
