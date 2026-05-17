@@ -1,0 +1,67 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input {
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  }
+  .card {
+    @apply rounded-2xl border border-gray-200 bg-white p-6 shadow-sm;
+  }
+}
+
+/* Markdown report styles */
+.report-content h1 {
+  @apply mb-4 mt-8 text-2xl font-bold text-gray-900 first:mt-0;
+}
+.report-content h2 {
+  @apply mb-3 mt-6 text-xl font-semibold text-gray-800;
+}
+.report-content h3 {
+  @apply mb-2 mt-4 text-lg font-semibold text-gray-700;
+}
+.report-content p {
+  @apply mb-3 leading-relaxed text-gray-700;
+}
+.report-content ul {
+  @apply mb-3 list-disc pl-5 text-gray-700;
+}
+.report-content ol {
+  @apply mb-3 list-decimal pl-5 text-gray-700;
+}
+.report-content li {
+  @apply mb-1;
+}
+.report-content table {
+  @apply mb-4 w-full border-collapse text-sm;
+}
+.report-content th {
+  @apply border border-gray-200 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700;
+}
+.report-content td {
+  @apply border border-gray-200 px-3 py-2 text-gray-700;
+}
+.report-content blockquote {
+  @apply my-3 border-l-4 border-brand-500 pl-4 italic text-gray-600;
+}
+.report-content code {
+  @apply rounded bg-gray-100 px-1 py-0.5 font-mono text-sm text-gray-800;
+}
