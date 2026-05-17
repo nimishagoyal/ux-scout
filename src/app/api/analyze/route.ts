@@ -116,10 +116,15 @@ function injectFallbackImageUrls(
   }
 
   return report.replace(/^(### )(.+)$/gm, (match, _prefix, name) => {
-    const urls = byApp[name.trim()];
+    const trimmed = name.trim();
+    // Find a matching app name (case-insensitive, partial match)
+    const appName = Object.keys(byApp).find(
+      (a) => trimmed.toLowerCase().includes(a.toLowerCase()) || a.toLowerCase().includes(trimmed.toLowerCase())
+    );
+    const urls = appName ? byApp[appName] : undefined;
     if (!urls || urls.length === 0) return match;
     const imgTags = urls
-      .map((url, i) => `![${name.trim()} — Screenshot ${i + 1}](${url})`)
+      .map((url, i) => `![${appName} — Screenshot ${i + 1}](${url})`)
       .join("\n");
     return `${match}\n${imgTags}`;
   });
@@ -139,6 +144,10 @@ export async function POST(req: NextRequest) {
 
     let report: string;
 
+    // Always load fallback images — used for Claude vision AND for injecting
+    // public URLs into the journey section regardless of which path runs.
+    const fallbackImages = loadFallbackScreenshots();
+
     try {
       // Path 1: CLI with live Mobbin MCP
       report = await generateReportViaCLI(category, flowType);
@@ -148,7 +157,6 @@ export async function POST(req: NextRequest) {
         cliErr
       );
       // Path 2 & 3: direct API (uses Mobbin MCP token if set, else fallback screenshots, else knowledge)
-      const fallbackImages = loadFallbackScreenshots();
       if (fallbackImages.length > 0) {
         console.log(
           `[/api/analyze] Using ${fallbackImages.length} fallback screenshots from public/`
@@ -159,9 +167,12 @@ export async function POST(req: NextRequest) {
         flowType,
         fallbackImages.length > 0 ? fallbackImages : undefined
       );
-      if (fallbackImages.length > 0) {
-        report = injectFallbackImageUrls(report, fallbackImages);
-      }
+    }
+
+    // Always inject fallback screenshot URLs so the UI shows real images.
+    // This runs for both CLI and direct-API paths.
+    if (fallbackImages.length > 0) {
+      report = injectFallbackImageUrls(report, fallbackImages);
     }
 
     return NextResponse.json({ report });

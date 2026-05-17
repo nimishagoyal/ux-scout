@@ -1719,13 +1719,12 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
             <div key={i} style={{ position: "relative" }}>
               <div
                 style={{
-                  height: 120,
-                  padding: 5,
+                  height: journey.imageUrls[i] ? "auto" : 120,
+                  aspectRatio: journey.imageUrls[i] ? "9/19.5" : undefined,
+                  padding: journey.imageUrls[i] ? 0 : 5,
                   background: S.raisedWarm,
                   boxShadow: `0 0 0 1px rgba(232,227,210,0.08)`,
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "flex-start",
+                  overflow: "hidden",
                 }}
               >
                 {journey.imageUrls[i] ? (
@@ -1733,7 +1732,7 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                   <img
                     src={journey.imageUrls[i]}
                     alt={`${journey.app} — ${step.name}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center", display: "block" }}
                   />
                 ) : (
                   <div
