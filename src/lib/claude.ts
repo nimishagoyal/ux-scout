@@ -121,11 +121,11 @@ In section 4 (Screenshot Journey Map), reference each screenshot by its position
     ...(mcpServers && { mcp_servers: mcpServers }),
   };
 
-  const response = await client.messages.create(requestParams, {
+  const response = (await client.messages.create(requestParams, {
     headers: mcpServers
       ? { "anthropic-beta": "mcp-client-2025-11-20" }
       : undefined,
-  });
+  })) as Anthropic.Message;
 
   // collect all text blocks (Claude may interleave tool calls with text)
   const text = response.content
