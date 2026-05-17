@@ -1675,6 +1675,24 @@ function SectionMatrix({
   );
 }
 
+// Maps the app name Claude references to the folder under public/.
+// Keep in sync with src/lib/fallbackScreenshots.ts.
+const APP_TO_FOLDER: Record<string, string> = {
+  coinbase: "Coinbase iOS Buying crypto",
+  kraken: "Kraken iOS Buying a coin",
+  binance: "Binance iOS Buying with USD",
+  "crypto.com": "Crypto.com iOS Buying a coin (recurring buy)",
+  cryptocom: "Crypto.com iOS Buying a coin (recurring buy)",
+};
+
+function getStepImageUrl(appName: string, stepIndex: number): string | null {
+  const key = appName.toLowerCase().replace(/[^a-z.]/g, "");
+  const folder = APP_TO_FOLDER[key];
+  if (!folder) return null;
+  const filename = `${folder} ${stepIndex}.png`;
+  return `/api/img?path=${encodeURIComponent(folder + "/" + filename)}`;
+}
+
 // ─── Section 04 — Journeys ────────────────────────────────────────────────────
 function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: number }) {
   const aColor = index % 2 === 0 ? S.amberGlow : S.cobaltGlow;
@@ -1715,24 +1733,57 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
             position: "relative",
           }}
         >
-          {journey.steps.map((step, i) => (
+          {journey.steps.map((step, i) => {
+            const imageUrl = getStepImageUrl(journey.app, i);
+            return (
             <div key={i} style={{ position: "relative" }}>
               <div
                 style={{
-                  height: journey.imageUrls[i] ? "auto" : 120,
-                  aspectRatio: journey.imageUrls[i] ? "9/19.5" : undefined,
-                  padding: journey.imageUrls[i] ? 0 : 5,
+                  height: 220,
+                  padding: 5,
                   background: S.raisedWarm,
                   boxShadow: `0 0 0 1px rgba(232,227,210,0.08)`,
+                  display: "flex",
+                  alignItems: "stretch",
+                  justifyContent: "center",
                   overflow: "hidden",
                 }}
               >
-                {journey.imageUrls[i] ? (
+                {imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={journey.imageUrls[i]}
-                    alt={`${journey.app} — ${step.name}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center", display: "block" }}
+                    src={imageUrl}
+                    alt={`${journey.app} — ${step.name || `step ${i + 1}`}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: "top",
+                      display: "block",
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: S.raised,
+                    padding: 10,
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: 6,
+                      width: 30,
+                      background: S.bone,
+                      opacity: 0.6,
+                      marginBottom: 8,
+                    }}
                   />
                 ) : (
                   <div
@@ -1767,6 +1818,7 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                       <div style={{ height: 12, width: 32, background: aColor, marginTop: 4 }} />
                     </div>
                   </div>
+                </div>
                 )}
               </div>
               <div style={{ marginTop: 10 }}>
@@ -1789,7 +1841,7 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                   style={{
                     position: "absolute",
                     right: -14,
-                    top: 56,
+                    top: 100,
                     color: aColor,
                     fontSize: 14,
                   }}
@@ -1798,7 +1850,8 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div style={{ color: S.ink, fontSize: 14 }}>
