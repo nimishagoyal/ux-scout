@@ -7,7 +7,8 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import type { FlowType, AnalyzeRequest } from "@/types";
+import type { FlowType, AnalyzeRequest, UploadedImage } from "@/types";
+import ScreenshotUpload from "./ScreenshotUpload";
 
 const FLOW_OPTIONS: { value: FlowType; label: string }[] = [
   { value: "onboarding", label: "Onboarding" },
@@ -27,15 +28,16 @@ interface SearchFormProps {
 export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
   const [category, setCategory] = useState("fintech apps");
   const [flowType, setFlowType] = useState<FlowType>("onboarding");
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!category.trim()) return;
-    onSubmit({ category: category.trim(), flowType });
+    onSubmit({ category: category.trim(), flowType, uploadedImages });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex-1">
         <label className="mb-1.5 block text-sm font-medium text-gray-700">
           Product Category
@@ -68,7 +70,7 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
         </select>
       </div>
 
-      <button type="submit" className="btn-primary h-[42px]" disabled={isLoading || !category.trim()}>
+      <button type="submit" className="btn-primary self-start" disabled={isLoading || !category.trim()}>
         {isLoading ? (
           <>
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -81,6 +83,14 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
           </>
         )}
       </button>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          Upload Screenshots{" "}
+          <span className="font-normal text-gray-400">(optional — used if Mobbin isn't available)</span>
+        </label>
+        <ScreenshotUpload images={uploadedImages} onChange={setUploadedImages} />
+      </div>
     </form>
   );
 }

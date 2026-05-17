@@ -125,8 +125,8 @@ export default function HomePage() {
               Generate a Prototype
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Answer 3 quick questions and get a ready-to-paste prompt for
-              Lovable or Bolt.
+              Tell us about your product and get a ready-to-paste prompt for
+              Lovable or Bolt — tailored to your goals.
             </p>
           </div>
           <PrototypeInterview
