@@ -1696,6 +1696,9 @@ function getStepImageUrl(appName: string, stepIndex: number): string | null {
 // ─── Section 04 — Journeys ────────────────────────────────────────────────────
 function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: number }) {
   const aColor = index % 2 === 0 ? S.amberGlow : S.cobaltGlow;
+  const visibleSteps = journey.steps
+    .map((step, i) => ({ step, imageUrl: journey.imageUrls?.[i] ?? getStepImageUrl(journey.app, i) }))
+    .filter((s): s is { step: { name: string; hint: string }; imageUrl: string } => !!s.imageUrl);
   return (
     <div
       style={{
@@ -1719,112 +1722,51 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
           <div>
             <div style={{ ...Stype.headlineMed, fontSize: 20, color: S.bone }}>{journey.app}</div>
             <div style={{ ...Stype.body, fontSize: 12, color: S.soft, marginTop: 2 }}>
-              {journey.steps.length || "?"} steps
+              {visibleSteps.length || "?"} steps
             </div>
           </div>
         </div>
       </div>
-      {journey.steps.length > 0 ? (
+      {visibleSteps.length > 0 ? (
         <div
           style={{
             display: "grid",
             gap: 14,
-            gridTemplateColumns: `repeat(${journey.steps.length}, minmax(140px, 1fr))`,
+            gridTemplateColumns: `repeat(${visibleSteps.length}, minmax(140px, 1fr))`,
             position: "relative",
           }}
         >
-          {journey.steps.map((step, i) => {
-            const imageUrl = getStepImageUrl(journey.app, i);
-            return (
-            <div key={i} style={{ position: "relative" }}>
+          {visibleSteps.map(({ step, imageUrl }, vi) => (
+            <div key={vi} style={{ position: "relative" }}>
               <div
                 style={{
-                  height: 220,
-                  padding: 5,
-                  background: S.raisedWarm,
-                  boxShadow: `0 0 0 1px rgba(232,227,210,0.08)`,
+                  height: 520,
                   display: "flex",
-                  alignItems: "stretch",
+                  alignItems: "flex-start",
                   justifyContent: "center",
                   overflow: "hidden",
                 }}
               >
-                {imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imageUrl}
-                    alt={`${journey.app} — ${step.name || `step ${i + 1}`}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      objectPosition: "top",
-                      display: "block",
-                    }}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                <div
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt={`${journey.app} — ${step.name || `step ${vi + 1}`}`}
                   style={{
                     width: "100%",
                     height: "100%",
-                    background: S.raised,
-                    padding: 10,
-                    position: "relative",
-                    overflow: "hidden",
+                    objectFit: "contain",
+                    objectPosition: "top",
+                    display: "block",
                   }}
-                >
-                  <div
-                    style={{
-                      height: 6,
-                      width: 30,
-                      background: S.bone,
-                      opacity: 0.6,
-                      marginBottom: 8,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      background: S.raised,
-                      padding: 10,
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: 6,
-                        width: 30,
-                        background: S.bone,
-                        opacity: 0.6,
-                        marginBottom: 8,
-                      }}
-                    />
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 4,
-                      }}
-                    >
-                      <div style={{ height: 4, background: S.dim }} />
-                      <div style={{ height: 4, background: S.dim, width: "80%" }} />
-                      <div style={{ height: 4, background: S.dim, width: "60%" }} />
-                      <div style={{ height: 12, width: 32, background: aColor, marginTop: 4 }} />
-                    </div>
-                  </div>
-                </div>
-                )}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
               </div>
               <div style={{ marginTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                   <span style={{ ...Stype.tabular, fontSize: 11, color: aColor }}>
-                    0{i + 1}
+                    0{vi + 1}
                   </span>
                   <span style={{ ...Stype.bodyMed, fontSize: 13, color: S.bone }}>
                     {step.name}
@@ -1836,7 +1778,7 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                   </div>
                 )}
               </div>
-              {i < journey.steps.length - 1 && (
+              {vi < visibleSteps.length - 1 && (
                 <div
                   style={{
                     position: "absolute",
@@ -1850,8 +1792,7 @@ function JourneyStrip({ journey, index }: { journey: ParsedJourney; index: numbe
                 </div>
               )}
             </div>
-            );
-          })}
+          ))}
         </div>
       ) : (
         <div style={{ color: S.ink, fontSize: 14 }}>

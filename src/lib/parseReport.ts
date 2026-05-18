@@ -195,12 +195,18 @@ function parsePatterns(md: string): ParsedPattern[] {
   return patterns;
 }
 
-function extractImageUrls(body: string): string[] {
-  const re = /!\[[^\]]*\]\(((?:https?:\/\/|\/)[^)]+)\)/g;
+function extractImageUrls(body: string, excludeApps: string[] = []): string[] {
+  const re = /!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)]+)\)/g;
   const urls: string[] = [];
   let m;
   while ((m = re.exec(body)) !== null) {
-    urls.push(m[1]);
+    const alt = m[1].toLowerCase();
+    const url = m[2];
+    // Skip images whose alt text explicitly names a different app
+    const crossApp = excludeApps.some(
+      (a) => a.length > 2 && alt.includes(a.toLowerCase())
+    );
+    if (!crossApp) urls.push(url);
   }
   return urls;
 }
@@ -210,13 +216,18 @@ function parseJourneys(md: string, competitorsHint: string[]): ParsedJourney[] {
   // Try splitting by ### headings first
   const sections = md.split(/^###\s+/m).filter((s) => s.trim().length > 0);
   const headed = md.match(/^###\s+/m) ? (md.startsWith("###") ? sections : sections.slice(1)) : [];
+  // Collect all app names so we can filter cross-app image references
+  const allAppNames = headed.map((chunk) =>
+    stripMd(chunk.split("\n")[0]).replace(/^[\s\d.]+/, "").trim()
+  ).filter(Boolean);
   for (const chunk of headed) {
     const [first, ...rest] = chunk.split("\n");
     const app = stripMd(first).replace(/^[\s\d.]+/, "").trim();
     if (!app) continue;
     const body = rest.join("\n").trim();
     const steps = extractSteps(body);
-    journeys.push({ app, steps, body, imageUrls: extractImageUrls(body) });
+    const otherApps = allAppNames.filter((a) => a.toLowerCase() !== app.toLowerCase());
+    journeys.push({ app, steps, body, imageUrls: extractImageUrls(body, otherApps) });
   }
   // Fallback: split by bold competitor names
   if (journeys.length === 0 && competitorsHint.length > 0) {
